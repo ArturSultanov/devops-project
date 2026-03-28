@@ -27,10 +27,15 @@ jobs:
         # https://github.com/hashicorp/setup-terraform
         uses: hashicorp/setup-terraform@v4
 
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
       - name: Terraform Init
         # TODO(temp): Initialize without connecting to S3
         working-directory: infra/terraform
-        run: terraform init -backend=false
+        run: terraform init -backend=false -input=false
 
       - name: Terraform Validate
-        run: terraform validate
+        run: terraform validate -no-color
