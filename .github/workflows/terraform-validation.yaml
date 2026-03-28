@@ -28,7 +28,7 @@ jobs:
         uses: hashicorp/setup-terraform@v4
 
       - name: Terraform Init
-      # TODO(temp): Initialize without connecting to S3
+        # TODO(temp): Initialize without connecting to S3
         run: terraform init -backend=false
 
       - name: Terraform Validate

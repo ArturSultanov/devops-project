@@ -35,7 +35,7 @@ jobs:
 
       - name: Run yamllint
         run: >
-          yamllint -c .github/workflows/yamllint.yaml . 
+          yamllint -c .github/workflows/yamllint.yaml .
           || (echo "YAML lint failed" && exit 1)
 
       - name: Success message
