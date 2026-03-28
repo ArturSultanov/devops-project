@@ -1,0 +1,35 @@
+---
+name: Terraform Validation
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "**.tf"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "**.tf"
+  workflow_dispatch:
+
+jobs:
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Terraform
+        # https://github.com/hashicorp/setup-terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init
+      # TODO(temp): Initialize without connecting to S3
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        run: terraform validate
