@@ -29,6 +29,7 @@ jobs:
 
       - name: Terraform Init
         # TODO(temp): Initialize without connecting to S3
+        working-directory: infra/terraform
         run: terraform init -backend=false
 
       - name: Terraform Validate
