@@ -33,9 +33,11 @@ jobs:
         continue-on-error: true
 
       - name: Terraform Init
-        # TODO(temp): Initialize without connecting to S3
+        id: init
+        # TODO(temp): Initialize without connecting to S3; Setup S3 bucket connection
         working-directory: infra/terraform
         run: terraform init -backend=false -input=false
 
       - name: Terraform Validate
+        id: validate
         run: terraform validate -no-color
