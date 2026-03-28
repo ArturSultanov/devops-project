@@ -43,7 +43,7 @@ resource "aws_eks_node_group" "worker_nodes" {
   node_group_name = "workers"
 
   capacity_type  = local.worker_capacity_type
-  instance_types = [local.worker_instance_type]
+  instance_types = local.worker_instance_types
 
   labels = {
     role = "worker"
@@ -70,8 +70,4 @@ resource "aws_eks_node_group" "worker_nodes" {
     aws_iam_role_policy_attachment.amazoneks_cni_policy_attachment,
     aws_iam_role_policy_attachment.amazonec2containerregistryreadonly_attachment,
   ]
-
-  lifecycle {
-    ignore_changes = [scaling_config[0].desired_size]
-  }
 }
