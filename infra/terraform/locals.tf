@@ -5,6 +5,6 @@ locals {
   project_name         = "devops-demo"
   eks_name             = "devops-demo-eks"
   eks_version          = "1.35"
-  worker_instance_type = "t3a.medium"
+  worker_instance_type = "t3.small"
   worker_capacity_type = "ON_DEMAND"
 }

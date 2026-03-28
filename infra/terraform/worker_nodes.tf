@@ -40,7 +40,7 @@ resource "aws_eks_node_group" "worker_nodes" {
   cluster_name    = aws_eks_cluster.eks.name
   version         = local.eks_version
   node_role_arn   = aws_iam_role.worker_nodes.arn
-  node_group_name = "workers-${local.worker_instance_type}"
+  node_group_name = "workers"
 
   capacity_type  = local.worker_capacity_type
   instance_types = [local.worker_instance_type]
