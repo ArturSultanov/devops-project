@@ -2,12 +2,6 @@
 name: YAML Lint
 
 on:
-  push:
-    branches:
-      - "**"
-    paths:
-      - "**.yaml"
-      - "**.yml"
   pull_request:
     branches:
       - "**"
@@ -27,8 +21,6 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
 
       - name: Install yamllint
         run: pip install yamllint
