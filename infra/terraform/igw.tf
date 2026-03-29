@@ -4,6 +4,4 @@ resource "aws_internet_gateway" "igw" {
   tags = {
     Name = "${local.project_name}-igw"
   }
-
-  depends_on = [aws_vpc.vpc]
 }

@@ -15,6 +15,4 @@ resource "aws_nat_gateway" "nat" {
   tags = {
     Name = "${local.project_name}-nat"
   }
-
-  depends_on = [aws_subnet.public_subnet_1, aws_internet_gateway.igw]
 }

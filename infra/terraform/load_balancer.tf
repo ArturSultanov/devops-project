@@ -61,5 +61,5 @@ resource "helm_release" "aws_lbc" {
     }
   ]
 
-  depends_on = [aws_eks_node_group.worker_nodes]
+  depends_on = [aws_eks_node_group.worker_nodes, aws_eks_addon.pod_identity]
 }
