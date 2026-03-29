@@ -1,5 +1,6 @@
 resource "aws_iam_role" "aws_lbc" {
-  name               = "${local.project_name}-aws-lbc-role"
+  name = "${local.project_name}-aws-lbc-role"
+
   assume_role_policy = <<JSON
   {
     "Version": "2012-10-17",
@@ -20,8 +21,8 @@ resource "aws_iam_role" "aws_lbc" {
 }
 
 resource "aws_iam_policy" "aws_lbc" {
-  policy = file("${path.module}/iam/iam_policy_3_1_0.json")
   name   = "AWSLoadBalancerControllerIAMPolicy"
+  policy = file("${path.module}/policies/iam_policy_3_1_0.json")
 }
 
 resource "aws_iam_role_policy_attachment" "aws_lbc" {
