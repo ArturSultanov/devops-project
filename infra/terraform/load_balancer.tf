@@ -44,7 +44,6 @@ resource "helm_release" "aws_lbc" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   version    = "3.1.0"
-  values     = [file("${path.module}/values/aws-load-balancer-controller.yaml")]
 
   set = [
     {

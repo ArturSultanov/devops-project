@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mysql
-  namespace: wordpress-1
+  namespace: devops-demo--wordpress
   labels:
     app: mysql
 spec:
@@ -26,12 +26,16 @@ spec:
         app: mysql
     spec:
       terminationGracePeriodSeconds: 60
- 
+
+      securityContext:
+        fsGroup: 1001
+        runAsUser: 0
+        runAsGroup: 0
+
       containers:
         - name: mysql
           image: public.ecr.aws/bitnami/mysql:9.6-debian-12
           imagePullPolicy: IfNotPresent
- 
           env:
             - name: MYSQL_DATABASE
               value: wordpress
@@ -47,19 +51,15 @@ spec:
                 secretKeyRef:
                   name: mysql-secret
                   key: MYSQL_USER_PASSWORD 
- 
           ports:
             - containerPort: 3306
- 
           resources:
             requests:
-              cpu: "250m"
+              cpu: "100m"
               memory: "512Mi"
-          # TODO(): enable limits after the tests
-          #  limits:
-          #    cpu: "1"
-          #    memory: "2Gi"
- 
+            limits:
+              cpu: "1"
+              memory: "1Gi"
           volumeMounts:
             - name: mysql-data
               mountPath: /bitnami/mysql/data 
@@ -67,7 +67,7 @@ spec:
           startupProbe:
             exec:
               command:
-              - /bin/bash
+              - sh
               - -c
               - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
             initialDelaySeconds: 30
@@ -77,7 +77,7 @@ spec:
           livenessProbe:
             exec:
               command:
-              - /bin/bash
+              - sh
               - -c
               - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
             periodSeconds: 10
@@ -87,7 +87,7 @@ spec:
           readinessProbe:
             exec:
               command:
-              - /bin/bash
+              - sh
               - -c
               - mysql -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" -e "SELECT 1;" --silent
             periodSeconds: 5

@@ -5,5 +5,5 @@ resources:
   - ns.yaml
   - database
   - storage
-  # - wordpress
+  - wordpress
 
