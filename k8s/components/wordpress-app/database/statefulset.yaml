@@ -1,0 +1,108 @@
+---
+# Reference documnetation: https://github.com/bitnami/containers/blob/main/bitnami/mysql/README.md
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: wordpress-1
+  labels:
+    app: mysql
+spec:
+  serviceName: mysql-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+ 
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+ 
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      terminationGracePeriodSeconds: 60
+ 
+      containers:
+        - name: mysql
+          image: public.ecr.aws/bitnami/mysql:9.6-debian-12
+          imagePullPolicy: IfNotPresent
+ 
+          env:
+            - name: MYSQL_DATABASE
+              value: wordpress
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD 
+            - name: MYSQL_USER
+              value: wordpress
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER_PASSWORD 
+ 
+          ports:
+            - containerPort: 3306
+ 
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+          # TODO(): enable limits after the tests
+          #  limits:
+          #    cpu: "1"
+          #    memory: "2Gi"
+ 
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /bitnami/mysql/data 
+
+          startupProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30 
+
+          livenessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+
+          readinessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - mysql -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" -e "SELECT 1;" --silent
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3 
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+        labels:
+          app: mysql
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 20Gi
+ 
