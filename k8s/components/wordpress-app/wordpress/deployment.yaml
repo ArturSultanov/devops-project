@@ -22,35 +22,20 @@ spec:
         - containerPort: 8080
           name: http
 
+        envFrom:
+        - configMapRef:
+            name: wordpress-config
         env:
-        - name: WORDPRESS_DATABASE_HOST
-          value: "mysql.devops-demo--wordpress.svc.cluster.local"
-        - name: WORDPRESS_DATABASE_PORT_NUMBER
-          value: "3306"
-        - name: WORDPRESS_DATABASE_NAME
-          value: "wordpress"
-        - name: WORDPRESS_DATABASE_USER
-          value: "wordpress"
         - name: WORDPRESS_DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: mysql-secret
               key: MYSQL_USER_PASSWORD
-        - name: WORDPRESS_ENABLE_HTTPS
-          value: "no"
-        - name: WORDPRESS_ENABLE_REVERSE_PROXY
-          value: "yes"
-        - name: WORDPRESS_USERNAME
-          value: "admin"
         - name: WORDPRESS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: ADMIN_PASSWORD
               name: wordpress-secret
-        - name: WORDPRESS_EMAIL
-          value: "email@example.com"
-        - name: WORDPRESS_BLOG_NAME
-          value: "My Demo Blog"
 
         resources:
           requests:
