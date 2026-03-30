@@ -9,17 +9,17 @@ spec:
     kind: Deployment
     name: wordpress
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 8
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
-        averageUtilization: 50
+        averageUtilization: 60
         type: Utilization
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: 60
+        averageUtilization: 75

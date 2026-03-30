@@ -53,13 +53,15 @@ spec:
                   key: MYSQL_USER_PASSWORD
           ports:
             - containerPort: 3306
+
           resources:
             requests:
-              cpu: "100m"
-              memory: "512Mi"
-            limits:
-              cpu: "1"
+              cpu: "500m"
               memory: "1Gi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+
           volumeMounts:
             - name: mysql-data
               mountPath: /bitnami/mysql/data
