@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wordpress-config
+  namespace: devops-demo--wordpress
+data:
+  WORDPRESS_DATABASE_HOST: "mysql.devops-demo--wordpress.svc.cluster.local"
+  WORDPRESS_DATABASE_PORT_NUMBER: "3306"
+  WORDPRESS_DATABASE_NAME: "wordpress"
+  WORDPRESS_DATABASE_USER: "wordpress"
+  WORDPRESS_ENABLE_HTTPS: "no"
+  WORDPRESS_ENABLE_REVERSE_PROXY: "yes"
+  WORDPRESS_USERNAME: "admin"
+  WORDPRESS_EMAIL: "email@example.com"
+  WORDPRESS_BLOG_NAME: "My Demo Blog"
