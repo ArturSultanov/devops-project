@@ -2,11 +2,6 @@
 name: Terraform Validation
 
 on:
-  push:
-    branches:
-      - "**"
-    paths:
-      - "**.tf"
   pull_request:
     branches:
       - "**"
