@@ -13,13 +13,13 @@ spec:
   selector:
     matchLabels:
       app: mysql
- 
+
   podManagementPolicy: OrderedReady
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
- 
+
   template:
     metadata:
       labels:
@@ -43,14 +43,14 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: mysql-secret
-                  key: MYSQL_ROOT_PASSWORD 
+                  key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_USER
               value: wordpress
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: mysql-secret
-                  key: MYSQL_USER_PASSWORD 
+                  key: MYSQL_USER_PASSWORD
           ports:
             - containerPort: 3306
           resources:
@@ -62,24 +62,24 @@ spec:
               memory: "1Gi"
           volumeMounts:
             - name: mysql-data
-              mountPath: /bitnami/mysql/data 
+              mountPath: /bitnami/mysql/data
 
           startupProbe:
             exec:
               command:
-              - sh
-              - -c
-              - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
+                - sh
+                - -c
+                - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
             initialDelaySeconds: 30
             periodSeconds: 10
-            failureThreshold: 30 
+            failureThreshold: 30
 
           livenessProbe:
             exec:
               command:
-              - sh
-              - -c
-              - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
+                - sh
+                - -c
+                - mysqladmin ping -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" --silent
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 5
@@ -87,12 +87,12 @@ spec:
           readinessProbe:
             exec:
               command:
-              - sh
-              - -c
-              - mysql -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" -e "SELECT 1;" --silent
+                - sh
+                - -c
+                - mysql -h localhost -u root --password="$MYSQL_ROOT_PASSWORD" -e "SELECT 1;" --silent
             periodSeconds: 5
             timeoutSeconds: 3
-            failureThreshold: 3 
+            failureThreshold: 3
 
   volumeClaimTemplates:
     - metadata:
@@ -105,4 +105,3 @@ spec:
         resources:
           requests:
             storage: 20Gi
- 

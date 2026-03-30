@@ -11,5 +11,10 @@ secretGenerator:
   - name: mysql-secret
     type: Opaque
     envs:
-      - secrets.env
+      - mysql-secrets.env
     behavior: create
+  - name: wordpress-secret
+    type: Opaque
+    envs:
+      - wordpress-secrets.env
+    

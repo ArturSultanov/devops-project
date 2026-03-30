@@ -4,7 +4,7 @@ metadata:
   name: wordpress
   namespace: devops-demo--wordpress
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: wordpress
@@ -38,6 +38,19 @@ spec:
               key: MYSQL_USER_PASSWORD
         - name: WORDPRESS_ENABLE_HTTPS
           value: "no"
+        - name: WORDPRESS_ENABLE_REVERSE_PROXY
+          value: "yes"
+        - name: WORDPRESS_USERNAME
+          value: "admin"
+        - name: WORDPRESS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: ADMIN_PASSWORD
+              name: wordpress-secret
+        - name: WORDPRESS_EMAIL
+          value: "email@example.com"
+        - name: WORDPRESS_BLOG_NAME
+          value: "My Demo Blog"
 
         resources:
           requests:
