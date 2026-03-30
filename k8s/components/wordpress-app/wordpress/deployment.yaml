@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,60 +15,60 @@ spec:
         app: wordpress
     spec:
       containers:
-      - name: wordpress
-        image: public.ecr.aws/bitnami/wordpress-nginx:6.9.4-debian-12-r1
-        imagePullPolicy: IfNotPresent
+        - name: wordpress
+          image: public.ecr.aws/bitnami/wordpress-nginx:6.9.4-debian-12-r1
+          imagePullPolicy: IfNotPresent
 
-        ports:
-        - containerPort: 8080
-          name: http
+          ports:
+            - containerPort: 8080
+              name: http
 
-        envFrom:
-        - configMapRef:
-            name: wordpress-config
-        env:
-        - name: WORDPRESS_DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-secret
-              key: MYSQL_USER_PASSWORD
-        - name: WORDPRESS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: ADMIN_PASSWORD
-              name: wordpress-secret
+          envFrom:
+            - configMapRef:
+                name: wordpress-config
+          env:
+            - name: WORDPRESS_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER_PASSWORD
+            - name: WORDPRESS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_PASSWORD
+                  name: wordpress-secret
 
-        resources:
-          requests:
-            cpu: "400m"
-            memory: "100Mi"
-          limits:
-            cpu: "1500m"
-            memory: "1Gi"
+          resources:
+            requests:
+              cpu: "400m"
+              memory: "100Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1Gi"
 
-        startupProbe:
-          httpGet:
-            path: /wp-admin/install.php
-            port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 10
-          failureThreshold: 30
-          timeoutSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /wp-admin/install.php
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
 
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          timeoutSeconds: 5
-          failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
 
-        readinessProbe:
-          httpGet:
-            path: /wp-login.php
-            port: 8080
-          initialDelaySeconds: 20
-          periodSeconds: 10
-          timeoutSeconds: 3
-          failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /wp-login.php
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3

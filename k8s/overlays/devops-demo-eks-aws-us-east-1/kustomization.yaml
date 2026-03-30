@@ -17,4 +17,3 @@ secretGenerator:
     type: Opaque
     envs:
       - wordpress-secrets.env
-    
