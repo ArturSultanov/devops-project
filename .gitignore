@@ -39,3 +39,6 @@ terraform.rc
 
 # Kubernetes components secretGenerator
 **/*secrets*.env
+
+# Backups
+*.bak

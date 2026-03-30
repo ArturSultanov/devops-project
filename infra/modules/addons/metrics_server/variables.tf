@@ -1,1 +1,4 @@
-variable "release_version" { type = string; default = "3.13.0" }
+variable "release_version" {
+  type    = string
+  default = "3.13.0"
+}

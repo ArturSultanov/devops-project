@@ -31,7 +31,7 @@ resource "aws_eks_cluster" "eks" {
     endpoint_private_access = true
     endpoint_public_access  = true
 
-  subnet_ids = private_subnets_ids 
+  subnet_ids = var.private_subnets_ids 
 
   }
 
@@ -94,7 +94,7 @@ resource "aws_eks_node_group" "worker_nodes" {
     role = "worker"
   }
 
-  subnet_ids = private_subnets_ids 
+  subnet_ids = var.private_subnets_ids 
 
   scaling_config {
     desired_size = 2
