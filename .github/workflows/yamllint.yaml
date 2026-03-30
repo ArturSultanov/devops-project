@@ -12,3 +12,7 @@ rules:
 
 ignore: |
   .git/
+  **/*secret*.yaml
+  **/*secret*.yml
+  **/*Secret*.yaml
+  **/*Secret*.yml

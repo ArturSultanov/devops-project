@@ -20,6 +20,6 @@ jobs:
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v3.0.0
 
-      - name: Build Kustomization (devops-demo-eks-aws-us-east-1)
+      - name: Build Kustomization WordPress
         run: |
-          kustomize build k8s/overlays/devops-demo-eks-aws-us-east-1 
+          kustomize build k8s/components/wordpress-app/
