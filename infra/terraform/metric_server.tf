@@ -3,9 +3,7 @@ resource "helm_release" "metrics_server" {
   repository = "https://kubernetes-sigs.github.io/metrics-server/"
   chart      = "metrics-server"
   version    = "3.13.0"
-  values     = [file("${path.module}/values/metrics-server.yaml")]
-
-  namespace = "kube-system"
+  namespace  = "kube-system"
 
   depends_on = [aws_eks_node_group.worker_nodes]
 }
