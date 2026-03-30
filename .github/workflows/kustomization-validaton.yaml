@@ -1,0 +1,25 @@
+---
+name: Validate Kustomize
+
+on:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "k8s/**"
+  workflow_dispatch:
+
+jobs:
+  kustomize-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v3.0.0
+
+      - name: Build Kustomization (devops-demo-eks-aws-us-east-1)
+        run: |
+          kustomize build k8s/overlays/devops-demo-eks-aws-us-east-1 
