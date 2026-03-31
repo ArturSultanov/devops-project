@@ -30,6 +30,7 @@ infra/
 ```
 
 #### Terraform Modules 
+
 The following section describes each individual Terraform module presented or used in this project:
 
 - [infra/modules/network/](./infra/modules/network/): Provisions the foundational networking infrastructure, including a VPC, public/private subnets across multiple AZs, a NAT Gateway for private egress, and an Internet Gateway.
@@ -54,6 +55,7 @@ Currently, only the `dev` environment is represented. Nevertheless, the configur
 ---
 
 ### Kubernetes Resources (Kustomize)
+
 The Kubernetes resources are organized in a modular Kustomize structure and designed to be reusable.
 
 Kubernetes manifests are placed inside the [k8s/](./k8s/) directory, where the [k8s/components/](./k8s/components/) sub-directory is dedicated to reusable components. These components are used in the [k8s/overlays/](./k8s/overlays/) sub-directories, which are dedicated to resources of the target cluster.
@@ -133,10 +135,12 @@ The application follows a classic two-tier architecture:
 This project is a prime example of modern **Infrastructure as Code (IaC)**, where every component—from the VPC and EKS cluster to the WordPress application—is defined as code.
 
 #### 1. Infrastructure as Code (Terraform)
+
 - **Environment Isolation**: The `infra/env/` structure ensures that different stages (dev, prod) are isolated. Changes in one environment do not impact others unless explicitly applied.
 - **Resource Reusability**: By using modules in `infra/modules/`, we avoid code duplication. For example, the `eks` module can be reused across different projects or environments with different parameters.
 
 #### 2. Kustomize Modular Approach
+
 The Kubernetes layer uses **Kustomize** to implement a "Base and Overlay" pattern:
 - **Components (`k8s/components/`)**: These are the "building blocks." They define generic resources (Deployments, Services, etc.) needed for the app to run. They are kept free of environment-specific details.
 - **Overlays (`k8s/overlays/`)**: This is where environment-specific logic lives. Overlays "import" components and apply patches (e.g., specific replica counts, namespace overrides, or secret generation).
@@ -170,11 +174,13 @@ The project includes automated validation workflows to ensure code quality and p
 ## How to Deploy
 
 ### Prerequisites
+
 - AWS CLI (v2.x) configured with appropriate permissions.
 - Terraform (>= 1.10).
 - kubectl (v1.30+) and kustomize (v5.x+) installed.
 
 ### 1. Provision Infrastructure
+
 ```bash
 cd infra/env/dev
 terraform init
@@ -183,39 +189,47 @@ terraform apply -auto-approve
 ```
 
 ### 2. Configure Access
+
 ```bash
 # Get the connection command from Terraform outputs
 terraform output update_kubeconfig_command | xargs bash
 ```
 
 ### 3. Prepare Application Secrets
+
 Before deploying, create the environment files required by Kustomize for sensitive data:
+
 ```bash
 cd k8s/overlays/devops-demo-eks-aws-us-east-1/
 ```
-Create `mysql-secrets.env`:
+Create `mysql-secrets.env` (see example [mysql-secrets-example.env](./k8s/overlays/devops-demo-eks-aws-us-east-1/mysql-secrets-example.env)):
+
 ```text
-MYSQL_ROOT_PASSWORD=your_root_password
-MYSQL_USER_PASSWORD=your_db_user_password
+MYSQL_ROOT_PASSWORD=RootPasswordExample
+MYSQL_USER_PASSWORD=UserPasswordExample
 ```
-Create `wordpress-secrets.env`:
+
+Create `wordpress-secrets.env` (see example [wordpress-secrets-example.env](./k8s/overlays/devops-demo-eks-aws-us-east-1/wordpress-secrets-example.env)):
+
 ```text
-ADMIN_PASSWORD=your_wp_admin_password
+ADMIN_PASSWORD=AdminPasswordExample
 ```
 
 ### 4. Deploy Application
+
 ```bash
 # Deploy using Kustomize
 kubectl apply -k k8s/overlays/devops-demo-eks-aws-us-east-1/
 ```
 
 ### 5. Accessing WordPress
+
 Once deployed, you can find the Application Load Balancer (ALB) URL by running:
+
 ```bash
 kubectl get ingress -n devops-demo--wordpress
 ```
-Access the Admin Dashboard at:
-`http://<ALB_URL>/wp-admin`
+Access the Admin Dashboard at: `http://<ALB_URL>/wp-admin`
 
 Login Credentials:
 * Username: `admin` (as defined in `configmap.yaml`)
@@ -225,16 +239,16 @@ Login Credentials:
 
 ## Infrastructure Cleanup
 
-To avoid ongoing AWS costs (NAT Gateways, EKS, EBS volumes) when the project is not in use:
 
 ```bash
-# 1. Delete Kubernetes resources (cleanup Load Balancer and EBS volumes)
+# 1. Delete Kubernetes resources (cleanup Load Balancer; MySQL EBS volumes will remain)
 kubectl delete -k k8s/overlays/devops-demo-eks-aws-us-east-1/
 
 # 2. Destroy AWS Infrastructure
 cd infra/env/dev
 terraform destroy -auto-approve
 ```
+
 ---
 
 ## Performance Benchmarking
@@ -243,6 +257,7 @@ Resource utilization benchmarks under various load levels (using `hey`):
 
 | Load Level | Requests/sec | Concurrency | WordPress CPU | MySQL CPU | Node CPU Avg |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Low** | 1 | 5 | ~160m | ~40m | ~7% |
-| **Medium** | 5 | 5 | ~640m | ~130m | ~22% |
-| **High** | 20 | 50 | ~1782m | ~297m | ~58% |
+| Low | 1 | 5 | ~160m | ~40m | ~7% |
+| Medium | 5 | 5 | ~640m | ~130m | ~22% |
+| High | 20 | 50 | ~1782m | ~297m | ~58% |
+
