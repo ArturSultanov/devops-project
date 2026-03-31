@@ -1,34 +1,50 @@
 # GEMINI.md - Project Context
 
 ## Project Overview
-This project is an Infrastructure-as-Code (IaC) and Kubernetes (K8s) deployment codebase designed to provision and manage a WordPress application on AWS EKS.
+This project is an Infrastructure-as-Code (IaC) and Kubernetes (K8s) deployment codebase designed to provision and manage a WordPress application on AWS EKS using a highly modular, corporate-grade architecture.
 
 ### Main Technologies:
-- **Infrastructure**: Terraform (>= 1.10) using AWS and Helm providers.
+- **Infrastructure**: Terraform (>= 1.10) with AWS, Helm, and Kubernetes providers.
 - **Cloud Platform**: AWS (EKS v1.35, VPC, S3 for state backend).
 - **Container Orchestration**: Kubernetes (EKS managed).
 - **Deployment Management**: Kustomize (components and overlays).
-- **CI/CD**: GitHub Actions for automated Terraform and Kustomize validation.
+- **CI/CD**: GitHub Actions for automated Terraform, Kustomize, and YAML validation.
 
 ### Architecture:
-1.  **Infrastructure Layer (`infra/terraform/`)**: Configures the underlying AWS resources including VPC, subnets, NAT gateways, EKS cluster, worker nodes (using Spot instances), and necessary IAM policies.
-2.  **Application Layer (`k8s/`)**:
-    -   **Components (`k8s/components/wordpress-app/`)**: Core manifests for WordPress, MySQL (StatefulSet), storage classes, and services.
-    -   **Overlays (`k8s/overlays/`)**: Environment-specific configurations (e.g., `devops-demo-eks-aws-us-east-1`).
+
+#### 1. Infrastructure Layer (`infra/`)
+The infrastructure follows the **Environment Isolation** pattern with reusable modules.
+
+*   **Modules (`infra/modules/`)**: Self-contained, reusable building blocks:
+    *   **`network/`**: VPC, Subnets (Public/Private), NAT Gateway, IGW, Route Tables.
+    *   **`eks/`**: Managed EKS cluster, IAM roles (cluster/nodes), and Spot instance worker nodes.
+    *   **`addons/`**: Modular sub-modules for EKS features:
+        *   **`pod_identity/`**: EKS Pod Identity Agent (required by other addons).
+        *   **`ebs_csi/`**: EBS CSI Driver for persistent storage.
+        *   **`load_balancer/`**: AWS Load Balancer Controller (via Helm).
+        *   **`metrics_server/`**: Metrics Server (via Helm) for HPA support.
+
+*   **Environments (`infra/env/`)**: Specific instances of the infrastructure:
+    *   **`dev/`**: The development environment orchestrator. Uses `terraform.tfvars` for configuration and unique state isolation in S3 (`dev/terraform.tfstate`).
+
+#### 2. Application Layer (`k8s/`)
+The application is deployed into the `devops-demo--wordpress` namespace.
+- **Components (`k8s/components/wordpress-app/`)**: Modular manifests for WordPress, MySQL (StatefulSet), and storage.
+- **Overlays (`k8s/overlays/`)**: Environment-specific configurations (e.g., `devops-demo-eks-aws-us-east-1`).
 
 ---
 
 ## Building and Running
 
 ### Infrastructure (Terraform)
-To manage the infrastructure, navigate to `infra/terraform/`:
+To manage the infrastructure, navigate to the environment directory:
 ```bash
-cd infra/terraform
+cd infra/env/dev
 terraform init
 terraform plan
 terraform apply
 ```
-*Note: The S3 backend is configured in `providers.tf` and requires appropriate AWS credentials.*
+*Note: The S3 backend is configured in `backend.tf` and requires AWS credentials.*
 
 ### Application (Kustomize)
 To build and inspect the Kubernetes manifests:
@@ -36,7 +52,7 @@ To build and inspect the Kubernetes manifests:
 # Build a specific overlay
 kustomize build k8s/overlays/devops-demo-eks-aws-us-east-1/
 
-# Apply to cluster (requires kubectl and cluster access)
+# Apply to cluster
 kustomize build k8s/overlays/devops-demo-eks-aws-us-east-1/ | kubectl apply -f -
 ```
 
@@ -45,27 +61,26 @@ kustomize build k8s/overlays/devops-demo-eks-aws-us-east-1/ | kubectl apply -f -
 ## Development Conventions
 
 ### Infrastructure
-- **Provider Versioning**: AWS provider (~> 6.38.0), Helm provider (~> 3.1.0).
-- **Backend**: S3 with state locking and encryption enabled.
-- **Locals**: Use `locals.tf` for region, naming, and instance type configurations.
-- **Formatting**: Always run `terraform fmt` before committing.
+- **Modularity**: All new features must be added as modules in `infra/modules/`.
+- **Isolation**: Never share state files between environments. Use unique S3 keys.
+- **Variable Injection**: Environment-specific data (instance types, versions) must stay in `.tfvars` files.
+- **Dependency Management**: Use explicit `depends_on` at the module level in `main.tf` to handle EKS bootstrap race conditions.
+- **Versioning**: Pin all provider versions in `versions.tf` and addon versions in `.tfvars`.
 
 ### Kubernetes
-- **Structure**: Follow the Kustomize "components" pattern for modularity.
-- **Namespacing**: Managed within the overlays or top-level kustomization files.
-- **Secrets**: Managed via `secretGenerator` in `kustomization.yaml` (using `.env` files).
+- **Namespacing**: Managed within overlays or top-level kustomizations.
+- **Autoscaling**: HPA is required for the WordPress frontend (monitors CPU).
+- **Storage**: Use `gp3` storage class via the EBS CSI driver.
 
 ### CI/CD (GitHub Actions)
-- **Terraform Validation**: Triggered on pull requests for `.tf` files. Checks formatting and validates configuration (runs `init -backend=false` for validation).
-- **Kustomize Validation**: Triggered on pull requests for `k8s/**` files. Ensures the kustomization build succeeds.
-- **Linting**: General YAML linting is enforced via `yaml-lint.yaml` and `yamllint.yaml`.
+- **Validation**: Every PR triggers Terraform formatting/validation and Kustomize build checks.
+- **Linting**: Strict YAML linting is enforced for all manifest files.
 
 ---
 
 ## Key Directories and Files
-- `infra/terraform/`: Terraform configuration files.
+- `infra/modules/`: Reusable Terraform logic.
+- `infra/env/dev/`: Development environment entry point.
 - `k8s/components/`: Core application modules.
 - `k8s/overlays/`: Environment-specific configurations.
-- `.github/workflows/`: CI pipeline definitions.
-- `infra/terraform/locals.tf`: Central place for infrastructure variables.
-- `infra/terraform/providers.tf`: Backend and provider configuration.
+- `infra/env/dev/terraform.tfvars`: Central place for environment-specific variables.

@@ -1,70 +1,107 @@
 # DevOps Project: Scalable WordPress on AWS EKS
 
-This project provides a production-grade Infrastructure-as-Code (IaC) and Kubernetes deployment for a WordPress application. It leverages AWS managed services, Terraform for infrastructure provisioning, and Kustomize for Kubernetes manifest management.
+This project provides a production-grade Infrastructure-as-Code (IaC) and Kubernetes deployment for a WordPress application. It leverages AWS managed services, Terraform for infrastructure provisioning with a modular, environment-isolated architecture, and Kustomize for Kubernetes manifest management.
 
 ---
 
 ## Architecture Overview
 
 ### AWS Infrastructure (Terraform)
-The infrastructure is designed for high availability, security, and cost-efficiency.
+The infrastructure is designed for high availability, security, and cost-efficiency using a **Modular Design** and **Environment Isolation** pattern.
 
-#### 1. Networking (VPC)
-- **AWS VPC**: A dedicated Virtual Private Cloud with a `10.0.0.0/16` CIDR block.
-- **Subnets**:
-    - **Public Subnets (x2)**: Hosted in different AZs for high availability. They contain the NAT Gateways and the Application Load Balancer (ALB).
-    - **Private Subnets (x2)**: Hosted in different AZs. These are where the EKS worker nodes reside, isolated from direct internet access.
-- **Internet Gateway (IGW)**: Provides internet access for resources in public subnets.
-- **NAT Gateways**: Allow worker nodes in private subnets to reach the internet for updates and image pulls while preventing inbound connections.
+#### Terraform Component Schema
+The following diagram illustrates how data flows from the environment configuration through the core modules to the Kubernetes API:
 
-#### 2. Compute (EKS)
-- **EKS Cluster**: A managed Kubernetes control plane (v1.35).
-- **Managed Node Groups**: 
-    - Uses **Amazon Linux 2** worker nodes.
-    - Optimized for cost using **SPOT instances** (`c7i-flex.large`, `m7i-flex.large`).
-    - Configured with auto-scaling (Min: 1, Desired: 2, Max: 5).
-- **IAM Roles & Policies**: Fine-grained access control for the cluster and worker nodes (e.g., `AmazonEKSClusterPolicy`, `AmazonEKSWorkerNodePolicy`, `AmazonEKS_CNI_Policy`).
+```mermaid
+graph TD
+    subgraph "Environment: infra/env/dev/"
+        TFVARS[terraform.tfvars] -- "Inputs" --> MAIN[main.tf]
+        VARS[variables.tf] -- "Definitions" --> MAIN
+        PROV[providers.tf] -- "EKS Auth" --> K8SAPI((Kubernetes API))
+    end
 
-#### 3. Storage & Add-ons
-- **EBS CSI Driver**: Installed via Terraform to manage Amazon EBS volumes for persistent storage.
-- **AWS EKS Add-ons**: Includes `vpc-cni`, `kube-proxy`, and `coredns`.
+    subgraph "Core Modules: infra/modules/"
+        NET[network module]
+        EKS[eks module]
+    end
+
+    subgraph "Addons Modules: infra/modules/addons/"
+        PI[pod_identity]
+        CSI[ebs_csi]
+        LBC[load_balancer]
+        MS[metrics_server]
+    end
+
+    %% Data Flow
+    NET -- "vpc_id / subnet_ids" --> EKS
+    NET -- "vpc_id" --> LBC
+    EKS -- "cluster_name" --> PI
+    EKS -- "cluster_name" --> CSI
+    EKS -- "cluster_name" --> LBC
+    EKS -- "cluster_name" --> MS
+    EKS -- "endpoint / ca_cert" --> PROV
+    PROV -- "Helm Install" --> K8SAPI
+
+    %% Dependencies
+    EKS -. "depends_on" .-> PI
+    PI -. "depends_on" .-> CSI
+    PI -. "depends_on" .-> LBC
+    EKS -. "depends_on" .-> MS
+```
 
 ---
 
 ### Kubernetes Resources (Kustomize)
 The application is deployed into the `devops-demo--wordpress` namespace using a modular Kustomize structure.
 
+#### Kubernetes Resource Interconnection Schema
+The following diagram illustrates the internal networking, discovery, and storage orchestration of the WordPress application:
+
+```mermaid
+graph TD
+    %% External Traffic
+    User((User)) -- "HTTP (Port 80)" --> ALB[AWS Application Load Balancer]
+    
+    %% Ingress & Routing
+    ALB -- "Target Group (IP Mode)" --> WP_SVC[WordPress Service]
+    WP_ING[WordPress Ingress] -- "Configures" --> ALB
+    
+    %% Application Layer
+    WP_SVC -- "Port 8080" --> WP_PODS[WordPress Pods]
+    WP_HPA[WordPress HPA] -- "Monitors CPU" --> WP_PODS
+    
+    %% Data & Config Flow
+    WP_PODS -- "Reads DB Host/User" --> WP_CM[WordPress ConfigMap]
+    WP_PODS -- "Reads Credentials" --> WP_SEC[WordPress/MySQL Secrets]
+    
+    %% Database Layer
+    WP_PODS -- "JDBC Connection (DNS)" --> DB_SVC[MySQL Service]
+    DB_SVC -- "Port 3306" --> DB_POD[MySQL Pod]
+    
+    %% Storage Layer
+    DB_POD -- "Mounts" --> DB_PVC[MySQL PVC]
+    DB_PVC -- "Provisions" --> SC[gp3 StorageClass]
+    SC -- "Creates" --> EBS[Amazon EBS Volume]
+```
+
 #### 1. WordPress Application
-- **Deployment**: Runs the `bitnami/wordpress-nginx` image.
-- **HPA (Horizontal Pod Autoscaler)**: Automatically scales the WordPress pods based on CPU utilization.
-- **Probes**: Configured with `startupProbe`, `livenessProbe`, and `readinessProbe` to ensure high availability and self-healing.
-- **Service**: A standard Service to expose WordPress pods internally.
-- **Ingress**: Uses the **AWS Load Balancer Controller** to provision an Application Load Balancer (ALB), providing a single entry point for traffic.
+- **Ingress to ALB**: The `wordpress-ingress` triggers the **AWS Load Balancer Controller** to provision an internet-facing ALB. Traffic is routed directly to Pod IPs for optimal performance.
+- **Service Discovery**: WordPress connects to MySQL using the internal DNS name `mysql.devops-demo--wordpress.svc.cluster.local`, managed by CoreDNS.
+- **Self-Healing**: Configured with `startup`, `liveness`, and `readiness` probes to ensure automated recovery and zero-downtime deployments.
+- **HPA**: Automatically scales the frontend replicas based on CPU load.
 
 #### 2. Database (MySQL)
-- **StatefulSet**: Manages the MySQL database pods, ensuring stable network identifiers and persistent storage.
-- **Headless Service**: Used for service discovery between WordPress and MySQL.
-- **PersistentVolumeClaim (PVC)**: Requests 20Gi of `gp3` storage via the EBS CSI driver.
-
-#### 3. Configuration & Secrets
-- **ConfigMaps**: Store non-sensitive configuration for WordPress and Nginx.
-- **Secrets**: Managed via `secretGenerator` in Kustomize, injecting database credentials and admin passwords from `.env` files into pods as environment variables.
+- **StatefulSet**: Provides stable network identifiers and ordered deployment for the database layer.
+- **Persistence**: Uses a `volumeClaimTemplate` to dynamically provision 20Gi `gp3` EBS volumes via the **AWS EBS CSI Driver**.
+- **Headless Service**: Enables direct pod-to-pod communication if needed for future clustering.
 
 ---
 
 ## CI/CD Workflows (GitHub Actions)
 
-This repository uses GitHub Actions to automate validation and maintain code quality:
-
-1.  **Terraform Validation (`terraform-validation.yaml`)**:
-    -   Triggered on PRs to `.tf` files.
-    -   Runs `terraform fmt` to enforce style.
-    -   Runs `terraform validate` to catch syntax or configuration errors.
-2.  **Kustomize Validation (`kustomization-validaton.yaml`)**:
-    -   Triggered on PRs to `k8s/` files.
-    -   Executes `kustomize build` to ensure all manifests are valid and dependencies are resolved.
-3.  **YAML Linting (`yaml-lint.yaml`, `yamllint.yaml`)**:
-    -   Ensures all YAML files follow best practices and consistent formatting.
+1.  **Terraform Validation**: Checks formatting and configuration validity on every pull request.
+2.  **Kustomize Validation**: Ensures Kubernetes manifests are correctly built and dependencies are resolved.
+3.  **YAML Linting**: Enforces consistent formatting across all YAML configuration files.
 
 ---
 
@@ -89,16 +126,20 @@ Resource utilization benchmarks under various load levels (using `hey`):
 
 ### 1. Provision Infrastructure
 ```bash
-cd infra/terraform
+cd infra/env/dev
 terraform init
+terraform plan
 terraform apply -auto-approve
 ```
 
-### 2. Deploy Application
+### 2. Configure Access
 ```bash
-# Update kubeconfig to point to the new cluster
-aws eks update-kubeconfig --region us-east-1 --name devops-demo-eks
+# Get the connection command from Terraform outputs
+terraform output update_kubeconfig_command | xargs bash
+```
 
+### 3. Deploy Application
+```bash
 # Deploy using Kustomize
 kubectl apply -k k8s/overlays/devops-demo-eks-aws-us-east-1/
 ```
@@ -108,4 +149,6 @@ kubectl apply -k k8s/overlays/devops-demo-eks-aws-us-east-1/
 ## Maintenance & Troubleshooting
 - **Logs**: `kubectl logs -l app=wordpress -n devops-demo--wordpress`
 - **Scaling**: `kubectl get hpa -n devops-demo--wordpress`
-- **Infrastructure**: `terraform state list` to view managed AWS resources.
+- **Infrastructure**: Run `terraform state list` in the environment directory (`infra/env/dev`).
+
+For more detailed technical documentation for AI agents and developers, refer to [GEMINI.md](./GEMINI.md).
