@@ -1,5 +1,5 @@
 resource "aws_iam_role" "aws_lbc" {
-  name = "${local.project_name}-aws-lbc-role"
+  name = "${var.project_name}-aws-lbc-role"
 
   assume_role_policy = <<JSON
   {
@@ -31,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "aws_lbc" {
 }
 
 resource "aws_eks_pod_identity_association" "aws_lbc" {
-  cluster_name    = aws_eks_cluster.eks.name
+  cluster_name    = var.cluster_name
   namespace       = "kube-system"
   service_account = "aws-load-balancer-controller"
   role_arn        = aws_iam_role.aws_lbc.arn
@@ -43,12 +43,12 @@ resource "helm_release" "aws_lbc" {
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-  version    = "3.1.0"
+  version    = var.release_version
 
   set = [
     {
       name  = "clusterName"
-      value = aws_eks_cluster.eks.name
+      value = var.cluster_name
     },
     {
       name  = "serviceAccount.name"
@@ -56,9 +56,7 @@ resource "helm_release" "aws_lbc" {
     },
     {
       name  = "vpcId"
-      value = aws_vpc.vpc.id
+      value = var.vpc_id
     }
   ]
-
-  depends_on = [aws_eks_node_group.worker_nodes, aws_eks_addon.pod_identity]
 }

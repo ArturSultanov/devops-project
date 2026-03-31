@@ -1,5 +1,50 @@
+resource "aws_iam_role" "eks" {
+  name = "${var.project_name}-eks-role"
+
+  assume_role_policy = <<JSON
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": "sts:AssumeRole",
+        "Principal": {
+          "Service": "eks.amazonaws.com"
+        }
+      }
+    ]
+  }
+  JSON
+}
+
+resource "aws_iam_role_policy_attachment" "eks" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.eks.name
+}
+
+resource "aws_eks_cluster" "eks" {
+  name     = var.eks_name
+  version  = var.eks_version
+  role_arn = aws_iam_role.eks.arn
+
+  vpc_config {
+    endpoint_private_access = true
+    endpoint_public_access  = true
+
+  subnet_ids = var.private_subnets_ids 
+
+  }
+
+  access_config {
+    authentication_mode                         = "API"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.eks]
+}
+
 resource "aws_iam_role" "worker_nodes" {
-  name = "${local.project_name}-eks-node"
+  name = "${var.project_name}-eks-node"
 
   assume_role_policy = <<JSON
   {
@@ -38,23 +83,19 @@ resource "aws_iam_role_policy_attachment" "amazonec2containerregistryreadonly_at
 
 resource "aws_eks_node_group" "worker_nodes" {
   cluster_name    = aws_eks_cluster.eks.name
-  version         = local.eks_version
+  version         = var.eks_version
   node_role_arn   = aws_iam_role.worker_nodes.arn
   node_group_name = "workers"
 
-  capacity_type  = local.worker_capacity_type
-  instance_types = local.worker_instance_types
+  capacity_type  = var.capacity_type
+  instance_types = var.instance_types
 
   labels = {
     role = "worker"
   }
 
-  subnet_ids = [
-    aws_subnet.private_subnet_1.id,
-    aws_subnet.private_subnet_2.id
-  ]
+  subnet_ids = var.private_subnets_ids 
 
-  # TODO(): enable Cluster Autoscaler
   scaling_config {
     desired_size = 2
     max_size     = 5
