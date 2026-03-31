@@ -113,16 +113,16 @@ Resource utilization benchmarks under various load levels (using `hey`):
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Low** | 1 | 5 | ~160m | ~40m | ~7% |
 | **Medium** | 5 | 5 | ~640m | ~130m | ~22% |
-| **High** | 20 | 50 | ~1780m | ~300m | ~58% |
+| **High** | 20 | 50 | ~1782m | ~297m | ~58% |
 
 ---
 
 ## How to Deploy
 
 ### Prerequisites
-- AWS CLI configured with appropriate permissions.
-- Terraform >= 1.10.
-- `kubectl` and `kustomize` installed.
+- **AWS CLI** (v2.x) configured with appropriate permissions.
+- **Terraform** (>= 1.10).
+- **kubectl** (v1.30+) and **kustomize** (v5.x+) installed.
 
 ### 1. Provision Infrastructure
 ```bash
@@ -138,10 +138,52 @@ terraform apply -auto-approve
 terraform output update_kubeconfig_command | xargs bash
 ```
 
-### 3. Deploy Application
+### 3. Prepare Application Secrets
+Before deploying, create the environment files required by Kustomize for sensitive data:
+```bash
+cd k8s/overlays/devops-demo-eks-aws-us-east-1/
+```
+Create `mysql-secrets.env`:
+```text
+MYSQL_ROOT_PASSWORD=your_root_password
+MYSQL_USER_PASSWORD=your_db_user_password
+```
+Create `wordpress-secrets.env`:
+```text
+ADMIN_PASSWORD=your_wp_admin_password
+```
+
+### 4. Deploy Application
 ```bash
 # Deploy using Kustomize
 kubectl apply -k k8s/overlays/devops-demo-eks-aws-us-east-1/
+```
+
+### 5. Accessing WordPress
+Once deployed, you can find the Application Load Balancer (ALB) URL by running:
+```bash
+kubectl get ingress -n devops-demo--wordpress
+```
+Access the **Admin Dashboard** at:
+`http://<ALB_URL>/wp-admin`
+
+**Login Credentials:**
+*   **Username:** `admin` (as defined in `configmap.yaml`)
+*   **Password:** The value provided in `wordpress-secrets.env`.
+
+---
+
+## Infrastructure Cleanup
+
+To avoid ongoing AWS costs (NAT Gateways, EKS, EBS volumes) when the project is not in use:
+
+```bash
+# 1. Delete Kubernetes resources (cleanup Load Balancer and EBS volumes)
+kubectl delete -k k8s/overlays/devops-demo-eks-aws-us-east-1/
+
+# 2. Destroy AWS Infrastructure
+cd infra/env/dev
+terraform destroy -auto-approve
 ```
 
 ---
