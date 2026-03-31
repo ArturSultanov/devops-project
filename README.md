@@ -1,6 +1,6 @@
 # DevOps Project: Scalable WordPress on AWS EKS
 
-This project provides a production-grade Infrastructure-as-Code (IaC) and Kubernetes deployment for a WordPress application. It leverages AWS managed services, Terraform for infrastructure provisioning with a modular, environment-isolated architecture, and Kustomize for Kubernetes manifest management.
+This project provides a demo presentation of Infrastructure-as-Code (IaC) and Kubernetes deployment for a WordPress application. It leverages AWS managed services, Terraform for infrastructure provisioning with a modular, environment-isolated architecture, and Kustomize for Kubernetes manifest management.
 
 ---
 
@@ -185,12 +185,3 @@ kubectl delete -k k8s/overlays/devops-demo-eks-aws-us-east-1/
 cd infra/env/dev
 terraform destroy -auto-approve
 ```
-
----
-
-## Maintenance & Troubleshooting
-- **Logs**: `kubectl logs -l app=wordpress -n devops-demo--wordpress`
-- **Scaling**: `kubectl get hpa -n devops-demo--wordpress`
-- **Infrastructure**: Run `terraform state list` in the environment directory (`infra/env/dev`).
-
-For more detailed technical documentation for AI agents and developers, refer to [GEMINI.md](./GEMINI.md).
