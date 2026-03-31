@@ -1,53 +1,43 @@
 # DevOps Project: Scalable WordPress on AWS EKS
 
-This project provides a demo presentation of Infrastructure-as-Code (IaC) and Kubernetes deployment for a WordPress application. It leverages AWS managed services, Terraform for infrastructure provisioning with a modular, environment-isolated architecture, and Kustomize for Kubernetes manifest management.
+This project provides a demo presentation of Infrastructure-as-Code (IaC) and Kubernetes deployment for a WordPress application connected to MySQL database. It leverages AWS managed services, Terraform for infrastructure provisioning with a modular, environment-isolated approach.
 
 ---
 
-## Architecture Overview
+## Project Overview
+
+Project is separated into two main parts - Terraform modules and Kubernetes manifests. 
 
 ### AWS Infrastructure (Terraform)
-The infrastructure is designed for high availability, security, and cost-efficiency using a **Modular Design** and **Environment Isolation** pattern.
+The infrastructure is provisioned on AWS using Terraform providers and follows a modular design and invironment isolation pattern.
 
-#### Terraform Component Schema
-The following diagram illustrates how data flows from the environment configuration through the core modules to the Kubernetes API:
+Infrastructure components is placed inside `./infra/` directory, where `./infra/modules/` sub-directory is dedicated for the reusable modules, which are being used in `./infra/env/` sub-directory dedicated for different infrastructure environments such as "dev", "preprod", "prod" etc.
 
-```mermaid
-graph TD
-    subgraph "Environment: infra/env/dev/"
-        TFVARS[terraform.tfvars] -- "Inputs" --> MAIN[main.tf]
-        VARS[variables.tf] -- "Definitions" --> MAIN
-        PROV[providers.tf] -- "EKS Auth" --> K8SAPI((Kubernetes API))
-    end
+The directory structure is as following:
 
-    subgraph "Core Modules: infra/modules/"
-        NET[network module]
-        EKS[eks module]
-    end
-
-    subgraph "Addons Modules: infra/modules/addons/"
-        PI[pod_identity]
-        CSI[ebs_csi]
-        LBC[load_balancer]
-        MS[metrics_server]
-    end
-
-    %% Data Flow
-    NET -- "vpc_id / subnet_ids" --> EKS
-    NET -- "vpc_id" --> LBC
-    EKS -- "cluster_name" --> PI
-    EKS -- "cluster_name" --> CSI
-    EKS -- "cluster_name" --> LBC
-    EKS -- "cluster_name" --> MS
-    EKS -- "endpoint / ca_cert" --> PROV
-    PROV -- "Helm Install" --> K8SAPI
-
-    %% Dependencies
-    EKS -. "depends_on" .-> PI
-    PI -. "depends_on" .-> CSI
-    PI -. "depends_on" .-> LBC
-    EKS -. "depends_on" .-> MS
 ```
+.
+├── env/
+│   └── dev/
+└── modules
+    ├── addons/
+    │   ├── ebs_csi/
+    │   ├── load_balancer/
+    │   ├── metrics_server/
+    │   └── pod_identity/
+    ├── eks/
+    └── network/
+```
+
+#### Terraform Modules 
+The following section describes each individual modules which is preseted or used in this project:
+
+- `./infra/modules/eks/`: 
+- `./infra/modules/network/`:
+- `./infra/modules/addons/pod_identity/`:
+- `./infra/modules/addons/ebs_csi/`:
+- `./infra/modules/addons/load_balancer/`:
+- `./infra/modules/addons/metrics_server/`:
 
 ---
 
@@ -57,32 +47,6 @@ The application is deployed into the `devops-demo--wordpress` namespace using a 
 #### Kubernetes Resource Interconnection Schema
 The following diagram illustrates the internal networking, discovery, and storage orchestration of the WordPress application:
 
-```mermaid
-graph TD
-    %% External Traffic
-    User((User)) -- "HTTP (Port 80)" --> ALB[AWS Application Load Balancer]
-    
-    %% Ingress & Routing
-    ALB -- "Target Group (IP Mode)" --> WP_SVC[WordPress Service]
-    WP_ING[WordPress Ingress] -- "Configures" --> ALB
-    
-    %% Application Layer
-    WP_SVC -- "Port 8080" --> WP_PODS[WordPress Pods]
-    WP_HPA[WordPress HPA] -- "Monitors CPU" --> WP_PODS
-    
-    %% Data & Config Flow
-    WP_PODS -- "Reads DB Host/User" --> WP_CM[WordPress ConfigMap]
-    WP_PODS -- "Reads Credentials" --> WP_SEC[WordPress/MySQL Secrets]
-    
-    %% Database Layer
-    WP_PODS -- "JDBC Connection (DNS)" --> DB_SVC[MySQL Service]
-    DB_SVC -- "Port 3306" --> DB_POD[MySQL Pod]
-    
-    %% Storage Layer
-    DB_POD -- "Mounts" --> DB_PVC[MySQL PVC]
-    DB_PVC -- "Provisions" --> SC[gp3 StorageClass]
-    SC -- "Creates" --> EBS[Amazon EBS Volume]
-```
 
 #### 1. WordPress Application
 - **Ingress to ALB**: The `wordpress-ingress` triggers the **AWS Load Balancer Controller** to provision an internet-facing ALB. Traffic is routed directly to Pod IPs for optimal performance.
